@@ -1,0 +1,1 @@
+{"simulation_timestep": 6, "scenarios": ["FARO_20171109_0"], "start_date": "2017-11-09", "preconditioning": 10, "apr_file": "FARO_sim_T", "end_date": "2017-11-09", "reporting_interval": 10}
