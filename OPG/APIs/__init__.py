@@ -1,7 +1,7 @@
+# -*- coding: utf-8 -*-
 
 import pandas as pd
 import os
-os.environ['NLS_LANG'] = 'AMERICAN_AMERICA.ZHS16GBK'
 import cx_Oracle
 
 
