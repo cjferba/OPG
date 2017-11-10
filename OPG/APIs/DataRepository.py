@@ -11,6 +11,7 @@ class DRepositoryAPI:
         self.__password=Password
     def connect(self):
         self.__conn=MongoDB("conn", host="crono.ugr.es", port=27017, user=self.__user, pasw=self.__password)
+        self.__conn.connect()
         return True
     def disconnect(self):
         self.__conn.close()
@@ -19,11 +20,10 @@ class DRepositoryAPI:
         return 0
     def GetEitMetadata(self, Building):
         self.connect()
+        self.__conn.select_db(database="EiT_V2")
+        self.__conn.select_collection(collect="Metadata")
         return 0
     def GetEitData(self, Building, Selections, DateStart, DateEnd=datetime.datetime.today()):
-        self.connect()
-        self.__conn.select_db()
-        self.__conn.select_collection()
         return 0
 
 class MongoDB:
@@ -35,6 +35,7 @@ class MongoDB:
     Client = False
     db = ""
     collection = ""
+    uri=0
 
     def __init__(self, name, host="150.214.203.106", port=27017, user="", pasw=""):
         self.name = name
@@ -42,9 +43,31 @@ class MongoDB:
         self.Port = port
         self.__User = user
         self.__Pass = pasw
-        self.Client = MongoClient(self.__host, self.Port, self.__User, self.__Pass)
+        self.uri = 'mongodb://'+self.__User+':'+self.__Pass+'@'+self.__host+':'+str(self.Port)+'/'
 
+    def connect(self):
+        self.Client = MongoClient(self.uri, self.Port)
 
+    def select_db(self, database="EiT"):
+        self.db = self.Client[database]
+
+    def select_collection(self, collect="PlatformData"):
+        self.collection = self.db[collect]
+
+    def find_2(self, query):
+        cur = self.collection.find({"data.Parameter.values.2": "SanomataloBMS"})
+
+    def read_mongo(self, query={}, no_id=True):
+        """ Read from Mongo and Store into DataFrame """
+        cursor = self.collection.find(query)
+        # Expand the cursor and construct the DataFrame
+        df = pd.DataFrame(list(cursor))
+
+        # Delete the _id
+        if no_id:
+            del df['_id']
+
+        return df
     def select_db(self, database="EiT_V2"):
         self.db = self.Client[database]
 
@@ -55,4 +78,4 @@ class MongoDB:
 if __name__ == '__main__':
     print("Star")
     x= DRepositoryAPI("cjferba","alfaomega")
-    x.GetEitData("","","")
+    x.GetEitMetadata("")
