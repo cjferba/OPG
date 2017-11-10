@@ -22,17 +22,14 @@ import OPG.OPG_Structures.Scenario as Scenario
 import OPG.OPG_Structures.scan_api as scan_api
 import OPG.OPG_Structures.Config as Config
 
-
-
-
-
-
 class OPG:
-    """Esta clase se utiliza para la generacion de un plan operacional optimo para SANOMATALO
+
+
+    """Esta clase se utiliza para la generacion de un plan operacional optimo para Faro
 
         - **parameters**, **types**, **return** and **return types**::
 
-              :param arg1: description
+              :param Current: parallel executions
               :param arg2: description
               :type arg1: type description
               :type arg1: type description
@@ -77,6 +74,7 @@ class OPG:
         Here below is the results of the :func:`function1` docstring.
 
         """
+
     Current = 25
     DryBulbTem = None
     Building = 'FARO'  ## Pilot ##

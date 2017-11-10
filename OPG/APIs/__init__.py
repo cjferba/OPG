@@ -5,7 +5,7 @@ import os
 import cx_Oracle
 
 
-def GetOsupation(DateStart,DateEnd, Site, Subsite):
+def GetOccupation(DateStart,DateEnd, Site, Subsite):
 
     # jdbcConnection < - dbConnect(jdbcDriver, "jdbc:", "",
     #                              "")
@@ -79,4 +79,4 @@ def GetOsupation(DateStart,DateEnd, Site, Subsite):
     return 0
 
 if __name__ == '__main__':
-    GetOsupation("", "", "", "")
+    GetOccupation("", "", "", "")
