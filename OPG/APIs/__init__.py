@@ -1,5 +1,41 @@
+
 import pandas as pd
-def GetOsupation(Data, Site, Subsite):
+import os
+os.environ['NLS_LANG'] = 'AMERICAN_AMERICA.ZHS16GBK'
+import cx_Oracle
+
+
+def GetOsupation(DateStart,DateEnd, Site, Subsite):
+
+    # jdbcConnection < - dbConnect(jdbcDriver, "jdbc:", "",
+    #                              "")
+    #
+    # date = today()
+    # # Query on the Oracle instance name.
+    # instanceName < - dbGetQuery(
+    #     jdbcConnection, paste("
+    # '",
+    # format(today(), format="%d-%m-%y"), "' and '",
+    # format(today() + 1, format="%d-%m-%y"), "'", sep = ""))
+
+
+    connection = cx_Oracle.connect("opg", "opg3n3rgy", "oracle:thin:@//150.214.203.106:1521/occupancy_faro")
+
+    connstr = 'scott/tiger@server:1521/orcl'
+    conn = cx_Oracle.connect(connstr)
+
+
+    cursor = connection.cursor()
+    cursor.execute("""select * from eit.occupancy_view
+                      WHERE
+                      eit.occupancy_view.OCU_DATE
+                      between""",
+                   did=50,
+                   eid=190)
+    #for fname, lname in cursor:
+     #   print("Values:", fname, lname)
+
+
     Lista=[]
     for name in Lista:
         SimulacionName = "Simulacion FARO Planes Ocupacion" + name.split("/")[2].replace(".csv", "_")
@@ -41,3 +77,6 @@ def GetOsupation(Data, Site, Subsite):
         print("######################################")
         print(Fecha)
     return 0
+
+if __name__ == '__main__':
+    GetOsupation("", "", "", "")
