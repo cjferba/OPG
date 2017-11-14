@@ -42,8 +42,8 @@ class DRepositoryAPI:
             del df['_id']
         return df
 
-    def GetEitData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat())+"Z",
-                   DateEnd=str((datetime.datetime.today()).isoformat())+"Z"):
+    def GetEitData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat()) + "Z",
+                   DateEnd=str((datetime.datetime.today()).isoformat()) + "Z"):
         self.connect()
         self.__conn.select_db(database="EiT_V2")
         self.__conn.select_collection(collect="Metadata")
@@ -61,7 +61,7 @@ class DRepositoryAPI:
         """Query"""
         self.__conn.select_collection(collect=Building)
         print(Sensors)
-        cursor = self.__conn.collection.find({"ID_Sensor": {"$in": Sensors},"timestamp": { "$gte": Start, "$lte": End }})
+        cursor = self.__conn.collection.find({"ID_Sensor": {"$in": Sensors}, "timestamp": {"$gte": Start, "$lte": End}})
         df = pd.DataFrame(list(cursor))
         """ Read from Mongo and Store into DataFrame """
         # Delete the _id
@@ -131,9 +131,6 @@ def Date(t):
 if __name__ == '__main__':
     print("Star")
     x = DRepositoryAPI("cjferba", "alfaomega")
-    s=(x.GetEitData(Building="ICPE",DateStart="2016-10-29T13:45:00.000Z",DateEnd="2016-11-29T13:45:00.000Z"))
-    Sensors =list( s["ID_Sensor"])
+    s = (x.GetEitData(Building="ICPE", DateStart="2016-10-29T13:45:00.000Z", DateEnd="2016-11-29T13:45:00.000Z"))
+    Sensors = list(s["ID_Sensor"])
     print(Sensors)
-
-
-    print(Timestamp(x))

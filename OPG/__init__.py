@@ -17,14 +17,12 @@ from bokeh.plotting import figure
 from bokeh.io import save
 import shutil
 
-
 import OPG.OPG_Structures.Scenario as Scenario
 import OPG.OPG_Structures.scan_api as scan_api
 import OPG.OPG_Structures.Config as Config
 
+
 class OPG:
-
-
     """Esta clase se utiliza para la generacion de un plan operacional optimo para Faro
 
         - **parameters**, **types**, **return** and **return types**::
@@ -104,7 +102,7 @@ class OPG:
     # Flag
     UseExternalWeather = False
     UseExternalOccupacy = True
-    dir=0
+    dir = 0
 
     ## path##
     path = ""
@@ -135,7 +133,7 @@ class OPG:
                  EndDate=(datetime.date.today() + datetime.timedelta(days=1)),
                  channels=[], limit={}, ValSensor={},
                  Sample_period=15, Directory="."):
-        #os.chdir(Directory)
+        # os.chdir(Directory)
         self.dir = os.path.dirname(Directory)
         self.Current = Current
         self.Building = Building  ## Pilot ##
@@ -214,7 +212,7 @@ class OPG:
             aux1 = list(range(self.ActiveTime[0] - aux, self.ActiveTime[0], 1))
             self.ActiveTime = aux1 + self.ActiveTime
 
-    def Generate_Scenarios(self,wheather=False):
+    def Generate_Scenarios(self, wheather=False):
         print("Generating Config occupancy")
         YChanels = {}
         for sensor in self.Channels:
@@ -225,10 +223,10 @@ class OPG:
                 if self.Occupancy[i] == 1:
                     y.append(self.Limit[sensor]["Min"])
             YChanels[sensor] = (y.copy())
-        if wheather==False:
+        if wheather == False:
             for i in range(0, len(self.ScenariosList)):
                 self.ScenariosList[i].setAllSetPoints(YChanels.copy())
-                self.ScenariosList[i].ScenarioJsonToFile(path=self.pathScenarios,weather=False)
+                self.ScenariosList[i].ScenarioJsonToFile(path=self.pathScenarios, weather=False)
 
     def Generate_AutoOP(self, ListDIC, Ocupacion):
         if len(ListDIC) == (self.Current):
@@ -249,9 +247,9 @@ class OPG:
         Faro = "{\"FARO\": {        \"sample_period\": 15,        \"channels\": []    }}"
         ConfigureB = Config.Config(end_date=self.StarDate, start_date=self.StarDate,
                                    apr_file=self.Building + "_sim_T", scenarios=self.ScenariesNames)
-        self.ScenariosList[0].ScenarioJsonToFile(path=self.pathScenarios,weather=True)
+        self.ScenariosList[0].ScenarioJsonToFile(path=self.pathScenarios, weather=True)
         name = self.RunSimulation("Weather", 1)
-        Weather = pd.read_csv( self.Empty + self.nameEmpty)["SCAN0004"]
+        Weather = pd.read_csv(self.Empty + self.nameEmpty)["SCAN0004"]
         self.DryBulbTem = list(Weather)
         return Weather
 
@@ -429,9 +427,288 @@ class OPG:
             ComplexDF.to_csv(self.pathIterations + "All_" + str(Phase) + "_" + str(Iteration) + "_" + "Completo.csv",
                              sep=',')
 
+    def ExtractingWeather(self):
+        self.DryBulbTem = 0
+        return self.DryBulbTem
+
+    def Run_PreRooms(self, Occupancy=0):
+        y = []
+        if Occupancy != 0:
+            self.Occupancy = Occupancy
+
+        for i in range(0, len(self.Occupancy)):
+            if self.Occupancy[i] == 0:
+                y.append(self.Limit['Min'])
+            if self.Occupancy[i] == 1:
+                y.append(30)  # self.Limit['Max'])
+
+        for indice in range(28, 38):
+            y[indice] = 40
+        for indice in range(38, 44):
+            y[indice] = 35
+
+        Options = [2]  # [56,62]#, ,4, 9, 12]
+
+        Pre_Heating = []
+        self.ScenariosList[0].setSetPoints(self.Channels[0], y.copy())
+        Setpoint = self.ScenariosList[0].getSetpointPlot()
+        ListSetpointPREHEATING = []
+        ListSetpointNAMES = []
+        for i in Options:
+            x = self.ActiveTime[0] - i
+            for tem in self.ValuesOfSensor:
+                Setpoint = y.copy()
+                for j in range(0, i):
+                    Setpoint[x + j] = tem
+                ListSetpointPREHEATING.append(Setpoint.copy())
+        ban = False
+        iteration = 1
+        ListSetpointPREHEATING[0][24] = 35
+        ListSetpointPREHEATING[0][25] = 35
+        ListSetpointPREHEATING[0][26] = 40
+        ListSetpointPREHEATING[0][27] = 40
+        while (ban == False):
+            print(len(ListSetpointPREHEATING))
+            if len(ListSetpointPREHEATING) > self.Current:
+                number = self.Current
+            else:
+                number = len(ListSetpointPREHEATING)
+            print(len(self.ScenariosList))
+            print(len(ListSetpointPREHEATING) > self.Current)
+            print(len(ListSetpointPREHEATING))
+            for i in range(0, number):
+                auxlist = ListSetpointPREHEATING.pop()
+                self.ScenariosList[i].setSetPoints(self.Channels[0], auxlist)
+                self.ScenariosList[i].setOutPutName("Preheating_Option_" + str(len(ListSetpointPREHEATING) - i))
+                # print(len(self.ScenariosList[i].getOutPutName()))
+                # self.ScenariosList[i].ScenarioJsonToFile2(self.path, str(self.StarDate) + 'SANOMATALO_test' + str(iteration),
+                #
+                print(self.ScenariosList[i])
+                # np.array(ListSetpointPREHEATING[iteration]))
+                # print(len(np.array(ListSetpointPREHEATING[i])))
+                # print(np.array(ListSetpointPREHEATING[i]))
+                self.ScenariosList[i].ScenarioJsonToFile(self.pathScenarios, np.array(auxlist))
+            self.RunSimulation(Iteration=iteration, Phase="PReHeating")
+            iteration = iteration + 1
+            ban = True
+        return 1
+
+    def Run_ReOPG(self, Hora):
+        return 2
+
+    def Run_Gredy(self):
+        y = []
+        print(len(self.Occupancy))
+        for i in range(0, len(self.Occupancy)):
+            if self.Occupancy[i] == 0:
+                y.append(self.Limit['Min'])
+            if self.Occupancy[i] == 1:
+                y.append(20)  # self.Limit['Max'])
+
+        Pre_Heating = []
+        self.ScenariosList[0].setSetPoints(self.Channels[0], y.copy())
+        Setpoint = self.ScenariosList[0].getSetpointPlot()
+        ListSetpointPREHEATING = []
+        ListSetpointNAMES = []
+        for i in [1, 2]:
+            x = self.ActiveTime[0] - i
+            for tem in self.ValuesOfSensor:
+                Setpoint = y.copy()
+                for j in range(0, i):
+                    Setpoint[x + j] = tem
+                print(Setpoint)
+                ListSetpointPREHEATING.append(Setpoint.copy())
+        ban = False
+        iteration = 1
+
+        while (ban == False):
+            print(len(ListSetpointPREHEATING))
+            if len(ListSetpointPREHEATING) > self.Current:
+                number = self.Current
+            else:
+                number = len(ListSetpointPREHEATING)
+            print(len(self.ScenariosList))
+            print(len(ListSetpointPREHEATING) > self.Current)
+            print(len(ListSetpointPREHEATING))
+            for i in range(0, number):
+                auxlist = ListSetpointPREHEATING.pop()
+                self.ScenariosList[i].setSetPoints(self.Channels[0], auxlist)
+                self.ScenariosList[i].setOutPutName("Preheating_Option_" + str(len(ListSetpointPREHEATING) - i))
+                # print(len(self.ScenariosList[i].getOutPutName()))
+                # self.ScenariosList[i].ScenarioJsonToFile2(self.path, str(self.StarDate) + 'SANOMATALO_test' + str(iteration),
+                #
+                print(self.ScenariosList[i])
+                # np.array(ListSetpointPREHEATING[iteration]))
+                # print(len(np.array(ListSetpointPREHEATING[i])))
+                # print(np.array(ListSetpointPREHEATING[i]))
+                self.ScenariosList[i].ScenarioJsonToFile(self.pathScenarios, np.array(auxlist))
+            self.RunSimulation(Iteration=iteration, Phase="PReHeating")
+            iteration = iteration + 1
+            ban = True
+        return 1
+
+    def StoreScenario(self):
+        return 1
+
+    def WriteJsonB(self, Dic: dict, Name=""):
+        """
+
+        :type Dic: dict
+        """
+        import pandas as pd
+        StarDay = pd.to_datetime(self.StarDate.strftime(format='%Y-%m-%d'),
+                                 format='%Y-%m-%d', errors='raise', infer_datetime_format=False, exact=True)
+        date_list = [StarDay + datetime.timedelta(minutes=x) for x in range(0, 1440, 15)]  # 0, 1440, 10
+        # print(type(date_list[0]))
+        # Json = ""
+        # print(date_list)
+
+        for i in Dic.keys():
+            StringJson = "["
+            if i == "SC002227":
+                var = 1
+                des = "UC76_CMD"
+            elif i == "SC002236":
+                var = 2
+                des = "UC67_CMD"
+            elif i == "SC002249":
+                var = 3
+                des = "UC78_CMD"
+            elif i == "SC002271":
+                var = 4
+                des = "UC80_CMD"
+            elif i == "SC002238":
+                var = 5
+                des = "UC77_CMD"
+            elif i == "SC002310":
+                var = 6
+                des = "UC69_CMD"
+            elif i == "SC002321":
+                var = 7
+                des = "UC70_CMD"
+            elif i == "SC002282":
+                var = 8
+                des = "UC81_CMD"
+            elif i == "SC002332":
+                var = 9
+                des = "UC71_CMD"
+            elif i == "SC002354":
+                var = 10
+                des = "UC73_CMD"
+            elif i == "SC002365":
+                var = 11
+                des = "UC74_CMD"
+            elif i == "SC002376":
+                var = 12
+                des = "UC75_CMD"
+            elif i == "SC002299":
+                var = 13
+                des = "UC68_CMD"
+            elif i == "SC002343":
+                var = 14
+                des = "UC72_CMD"
+            elif i == "SC002260":
+                var = 15
+                des = "UC79_CMD"
+            for j in range(0, len(Dic[i])):
+                StringJson = StringJson + "{" \
+                                          "\"StartDateTime\": \"" + str(date_list[j].isoformat()) + "\",\n" + \
+                             "\"VariableID\": " + str(var) + ",\n" + \
+                             "\"VariableName\": \"" + str(i) + "\",\n" + \
+                             "\"Description\": \"" + str(des) + "\",\n" + \
+                             "\"Value\":" + str(Dic[i][j]) + "},\n"
+
+            StringJson = StringJson[:-2] + "]"
+            print(self.path)
+            pathFull = os.path.abspath(self.path + Name + "pizarra" + "_Variable_" + str(i) + ".json")
+            print(pathFull)
+            with open(pathFull, "w") as out:
+                out.write(StringJson)
+        return 1
+
+    def WriteJsonBRecalculo(self, Dic: dict, Name="", hour=0, Recalculo=0):
+        """
+
+        :type Dic: dict
+        """
+        import pandas as pd
+        StarDay = pd.to_datetime(self.StarDate.strftime(format='%Y-%m-%d'),
+                                 format='%Y-%m-%d', errors='raise', infer_datetime_format=False, exact=True)
+        date_list = [StarDay + datetime.timedelta(minutes=x) for x in range(0, 1440, 15)]  # 0, 1440, 10
+        # print(type(date_list[0]))
+        # Json = ""
+        # print(date_list)
+
+        for i in Dic.keys():
+            StringJson = "["
+            if i == "SC002227":
+                var = 1
+                des = "UC76_CMD"
+            elif i == "SC002236":
+                var = 2
+                des = "UC67_CMD"
+            elif i == "SC002249":
+                var = 3
+                des = "UC78_CMD"
+            elif i == "SC002271":
+                var = 4
+                des = "UC80_CMD"
+            elif i == "SC002238":
+                var = 5
+                des = "UC77_CMD"
+            elif i == "SC002310":
+                var = 6
+                des = "UC69_CMD"
+            elif i == "SC002321":
+                var = 7
+                des = "UC70_CMD"
+            elif i == "SC002282":
+                var = 8
+                des = "UC81_CMD"
+            elif i == "SC002332":
+                var = 9
+                des = "UC71_CMD"
+            elif i == "SC002354":
+                var = 10
+                des = "UC73_CMD"
+            elif i == "SC002365":
+                var = 11
+                des = "UC74_CMD"
+            elif i == "SC002376":
+                var = 12
+                des = "UC75_CMD"
+            elif i == "SC002299":
+                var = 13
+                des = "UC68_CMD"
+            elif i == "SC002343":
+                var = 14
+                des = "UC72_CMD"
+            elif i == "SC002260":
+                var = 15
+                des = "UC79_CMD"
+            for j in range(hour, len(Dic[i])):
+                StringJson = StringJson + "{" \
+                                          "\"StartDateTime\": \"" + str(date_list[j].isoformat()) + "\",\n" + \
+                             "\"VariableID\": " + str(var) + ",\n" + \
+                             "\"VariableName\": \"" + str(i) + "\",\n" + \
+                             "\"Description\": \"" + str(des) + "\",\n" + \
+                             "\"Value\":" + str(Dic[i][j]) + "},\n"
+
+            StringJson = StringJson[:-2] + "]"
+            print(self.path)
+            if Recalculo == 0:
+                pathFull = os.path.abspath(self.path + Name + "pizarra" + "_Variable_" + str(i) + ".json")
+            if Recalculo != 0:
+                pathFull = os.path.abspath(
+                    self.path + Name + "_" + Recalculo + "_pizarra" + "_Variable_" + str(i) + ".json")
+            print(pathFull)
+            with open(pathFull, "w") as out:
+                out.write(StringJson)
+        return 1
+
     def RunSimulation(self, Phase, Iteration, ExportChannels=[]):
-        if ExportChannels==[]:
-            ExportChannels=self.ListDataExport
+        if ExportChannels == []:
+            ExportChannels = self.ListDataExport
         if (Phase == "Weather"):
             ExportChannels = self.ListDataExport
 
@@ -585,7 +862,6 @@ class OPG:
         # after the functions above have been run, this will get the list of files and run through each of them sending
         #  the data to SCAN. and output from the script will be printed
 
-
         root, building, server = scan_api.open_token()
         files_list = select_directory(path_to_directory='Scenarios', extension='json')
 
@@ -707,7 +983,7 @@ class OPG:
         print('Complete par 2')
         print('Start Part 3')
 
-        pathRemove =os.path.join(self.dir, 'Exports/')
+        pathRemove = os.path.join(self.dir, 'Exports/')
         filelist = glob.glob(pathRemove + "*.zip")
         for f in filelist:
             os.remove(f)
@@ -718,7 +994,6 @@ class OPG:
         # These functions are called into the script and must be run before the script at the end.
         # select_directory is used to locate the json files that have the scenario data in them.
         # optional arguments to pass in are "path_to_directory" and "extension". recommended having a folder called "Scenarios" and using the extension "json"
-
 
         def export_csv_for_channel(building, start_date, end_date, scenarios_list, channels, output_details=False):
 
@@ -804,7 +1079,6 @@ class OPG:
         #  about the channel that is selected. If a channel cannot be found the function will report this
         # and move to the next channel.
 
-
         def get_channel_ids(building, channels, output_details=True):
             channel_list = building.get('channel-list').Channels
             channel_ids = []
@@ -836,10 +1110,10 @@ class OPG:
         channels_to_export = ExportChannels
         print(channels_to_export)
 
-        p=os.path.join(self.dir, 'Exports/')
+        p = os.path.join(self.dir, 'Exports/')
         print(listdir(p))
         for cosa in listdir(p):
-            cosa=cosa.split("\\")[1]
+            cosa = cosa.split("\\")[1]
             print(cosa)
             os.remove(os.path.join(p, str(cosa)))
 
@@ -865,8 +1139,8 @@ class OPG:
             i = i + 1
         if (Phase == "Weather"):
             self.Empty = os.path.join(self.dir, 'Simulaciones Vacias/')
-            self.nameEmpty=names[0].replace("Faro","")
-            self.nameEmpty=self.nameEmpty[0:4]+"-"+self.nameEmpty[4:6]+"-"+self.nameEmpty[6:8]+".csv"
+            self.nameEmpty = names[0].replace("Faro", "")
+            self.nameEmpty = self.nameEmpty[0:4] + "-" + self.nameEmpty[4:6] + "-" + self.nameEmpty[6:8] + ".csv"
             os.rename(str(self.path) + "/" + names[0],
                       self.Empty + "/" + str(self.nameEmpty))
             for file in range(1, len(names)):
@@ -876,8 +1150,9 @@ class OPG:
             for file in names:
                 os.rename(str(self.path) + file,
                           self.pathIterations + str(Phase) + "_" + str(Iteration) + "_" + str(file))
-                aux=os.path.join(self.dir, 'PlanesSimulados/')
-                copyfile(self.pathIterations + str(Phase) + "_" + str(Iteration) + "_" + str(file), aux + "/"+ str(Phase) + "_" + str(Iteration) + "_" + str(file))
+                aux = os.path.join(self.dir, 'PlanesSimulados/')
+                copyfile(self.pathIterations + str(Phase) + "_" + str(Iteration) + "_" + str(file),
+                         aux + "/" + str(Phase) + "_" + str(Iteration) + "_" + str(file))
 
         if (Phase != "Weather"):
             self.readDataResultPreheating(Phase=Phase, Iteration=Iteration, names=names)
@@ -889,282 +1164,4 @@ class OPG:
         # exec(open("Scenario_plots.py").read())
         return names[0]
 
-    def ExtractingWeather(self):
-        self.DryBulbTem = 0
-        return self.DryBulbTem
 
-    def Run_PreRooms(self, Occupancy=0):
-        y = []
-        if Occupancy != 0:
-            self.Occupancy = Occupancy
-
-        for i in range(0, len(self.Occupancy)):
-            if self.Occupancy[i] == 0:
-                y.append(self.Limit['Min'])
-            if self.Occupancy[i] == 1:
-                y.append(30)  # self.Limit['Max'])
-
-        for indice in range(28, 38):
-            y[indice] = 40
-        for indice in range(38, 44):
-            y[indice] = 35
-
-        Options = [2]  # [56,62]#, ,4, 9, 12]
-
-        Pre_Heating = []
-        self.ScenariosList[0].setSetPoints(self.Channels[0], y.copy())
-        Setpoint = self.ScenariosList[0].getSetpointPlot()
-        ListSetpointPREHEATING = []
-        ListSetpointNAMES = []
-        for i in Options:
-            x = self.ActiveTime[0] - i
-            for tem in self.ValuesOfSensor:
-                Setpoint = y.copy()
-                for j in range(0, i):
-                    Setpoint[x + j] = tem
-                ListSetpointPREHEATING.append(Setpoint.copy())
-        ban = False
-        iteration = 1
-        ListSetpointPREHEATING[0][24] = 35
-        ListSetpointPREHEATING[0][25] = 35
-        ListSetpointPREHEATING[0][26] = 40
-        ListSetpointPREHEATING[0][27] = 40
-        while (ban == False):
-            print(len(ListSetpointPREHEATING))
-            if len(ListSetpointPREHEATING) > self.Current:
-                number = self.Current
-            else:
-                number = len(ListSetpointPREHEATING)
-            print(len(self.ScenariosList))
-            print(len(ListSetpointPREHEATING) > self.Current)
-            print(len(ListSetpointPREHEATING))
-            for i in range(0, number):
-                auxlist = ListSetpointPREHEATING.pop()
-                self.ScenariosList[i].setSetPoints(self.Channels[0], auxlist)
-                self.ScenariosList[i].setOutPutName("Preheating_Option_" + str(len(ListSetpointPREHEATING) - i))
-                # print(len(self.ScenariosList[i].getOutPutName()))
-                # self.ScenariosList[i].ScenarioJsonToFile2(self.path, str(self.StarDate) + 'SANOMATALO_test' + str(iteration),
-                #
-                print(self.ScenariosList[i])
-                # np.array(ListSetpointPREHEATING[iteration]))
-                # print(len(np.array(ListSetpointPREHEATING[i])))
-                # print(np.array(ListSetpointPREHEATING[i]))
-                self.ScenariosList[i].ScenarioJsonToFile(self.pathScenarios, np.array(auxlist))
-            self.RunSimulation(Iteration=iteration, Phase="PReHeating")
-            iteration = iteration + 1
-            ban = True
-        return 1
-
-    def Run_ReOPG(self, Hora):
-        return 2
-
-    def Run_Gredy(self):
-        y = []
-        print(len(self.Occupancy))
-        for i in range(0, len(self.Occupancy)):
-            if self.Occupancy[i] == 0:
-                y.append(self.Limit['Min'])
-            if self.Occupancy[i] == 1:
-                y.append(20)  # self.Limit['Max'])
-
-        Pre_Heating = []
-        self.ScenariosList[0].setSetPoints(self.Channels[0], y.copy())
-        Setpoint = self.ScenariosList[0].getSetpointPlot()
-        ListSetpointPREHEATING = []
-        ListSetpointNAMES = []
-        for i in [1,2]:
-            x = self.ActiveTime[0] - i
-            for tem in self.ValuesOfSensor:
-                Setpoint = y.copy()
-                for j in range(0, i):
-                    Setpoint[x + j] = tem
-                print(Setpoint)
-                ListSetpointPREHEATING.append(Setpoint.copy())
-        ban = False
-        iteration = 1
-
-        while (ban == False):
-            print(len(ListSetpointPREHEATING))
-            if len(ListSetpointPREHEATING) > self.Current:
-                number = self.Current
-            else:
-                number = len(ListSetpointPREHEATING)
-            print(len(self.ScenariosList))
-            print(len(ListSetpointPREHEATING) > self.Current)
-            print(len(ListSetpointPREHEATING))
-            for i in range(0, number):
-                auxlist = ListSetpointPREHEATING.pop()
-                self.ScenariosList[i].setSetPoints(self.Channels[0], auxlist)
-                self.ScenariosList[i].setOutPutName("Preheating_Option_" + str(len(ListSetpointPREHEATING) - i))
-                # print(len(self.ScenariosList[i].getOutPutName()))
-                # self.ScenariosList[i].ScenarioJsonToFile2(self.path, str(self.StarDate) + 'SANOMATALO_test' + str(iteration),
-                #
-                print(self.ScenariosList[i])
-                # np.array(ListSetpointPREHEATING[iteration]))
-                # print(len(np.array(ListSetpointPREHEATING[i])))
-                # print(np.array(ListSetpointPREHEATING[i]))
-                self.ScenariosList[i].ScenarioJsonToFile(self.pathScenarios, np.array(auxlist))
-            self.RunSimulation(Iteration=iteration, Phase="PReHeating")
-            iteration = iteration + 1
-            ban = True
-        return 1
-
-    def StoreScenario(self):
-        return 1
-
-    def WriteJsonB(self, Dic: dict, Name=""):
-        """
-
-        :type Dic: dict
-        """
-        import pandas as pd
-        StarDay = pd.to_datetime(self.StarDate.strftime(format='%Y-%m-%d'),
-                                 format='%Y-%m-%d', errors='raise', infer_datetime_format=False, exact=True)
-        date_list = [StarDay + datetime.timedelta(minutes=x) for x in range(0, 1440, 15)]  # 0, 1440, 10
-        # print(type(date_list[0]))
-        # Json = ""
-        # print(date_list)
-
-
-        for i in Dic.keys():
-            StringJson = "["
-            if i == "SC002227":
-                var = 1
-                des = "UC76_CMD"
-            elif i == "SC002236":
-                var = 2
-                des = "UC67_CMD"
-            elif i == "SC002249":
-                var = 3
-                des = "UC78_CMD"
-            elif i == "SC002271":
-                var = 4
-                des = "UC80_CMD"
-            elif i == "SC002238":
-                var = 5
-                des = "UC77_CMD"
-            elif i == "SC002310":
-                var = 6
-                des = "UC69_CMD"
-            elif i == "SC002321":
-                var = 7
-                des = "UC70_CMD"
-            elif i == "SC002282":
-                var = 8
-                des = "UC81_CMD"
-            elif i == "SC002332":
-                var = 9
-                des = "UC71_CMD"
-            elif i == "SC002354":
-                var = 10
-                des = "UC73_CMD"
-            elif i == "SC002365":
-                var = 11
-                des = "UC74_CMD"
-            elif i == "SC002376":
-                var = 12
-                des = "UC75_CMD"
-            elif i == "SC002299":
-                var = 13
-                des = "UC68_CMD"
-            elif i == "SC002343":
-                var = 14
-                des = "UC72_CMD"
-            elif i == "SC002260":
-                var = 15
-                des = "UC79_CMD"
-            for j in range(0, len(Dic[i])):
-                StringJson = StringJson + "{" \
-                                          "\"StartDateTime\": \"" + str(date_list[j].isoformat()) + "\",\n" + \
-                             "\"VariableID\": " + str(var) + ",\n" + \
-                             "\"VariableName\": \"" + str(i) + "\",\n" + \
-                             "\"Description\": \"" + str(des) + "\",\n" + \
-                             "\"Value\":" + str(Dic[i][j]) + "},\n"
-
-            StringJson = StringJson[:-2] + "]"
-            print(self.path)
-            pathFull = os.path.abspath(self.path + Name+"pizarra" + "_Variable_" + str(i) + ".json")
-            print(pathFull)
-            with open(pathFull, "w") as out:
-                out.write(StringJson)
-        return 1
-
-    def WriteJsonBRecalculo(self, Dic: dict, Name="", hour=0, Recalculo=0):
-        """
-
-        :type Dic: dict
-        """
-        import pandas as pd
-        StarDay = pd.to_datetime(self.StarDate.strftime(format='%Y-%m-%d'),
-                                 format='%Y-%m-%d', errors='raise', infer_datetime_format=False, exact=True)
-        date_list = [StarDay + datetime.timedelta(minutes=x) for x in range(0, 1440, 15)]  # 0, 1440, 10
-        # print(type(date_list[0]))
-        # Json = ""
-        # print(date_list)
-
-
-        for i in Dic.keys():
-            StringJson = "["
-            if i == "SC002227":
-                var = 1
-                des = "UC76_CMD"
-            elif i == "SC002236":
-                var = 2
-                des = "UC67_CMD"
-            elif i == "SC002249":
-                var = 3
-                des = "UC78_CMD"
-            elif i == "SC002271":
-                var = 4
-                des = "UC80_CMD"
-            elif i == "SC002238":
-                var = 5
-                des = "UC77_CMD"
-            elif i == "SC002310":
-                var = 6
-                des = "UC69_CMD"
-            elif i == "SC002321":
-                var = 7
-                des = "UC70_CMD"
-            elif i == "SC002282":
-                var = 8
-                des = "UC81_CMD"
-            elif i == "SC002332":
-                var = 9
-                des = "UC71_CMD"
-            elif i == "SC002354":
-                var = 10
-                des = "UC73_CMD"
-            elif i == "SC002365":
-                var = 11
-                des = "UC74_CMD"
-            elif i == "SC002376":
-                var = 12
-                des = "UC75_CMD"
-            elif i == "SC002299":
-                var = 13
-                des = "UC68_CMD"
-            elif i == "SC002343":
-                var = 14
-                des = "UC72_CMD"
-            elif i == "SC002260":
-                var = 15
-                des = "UC79_CMD"
-            for j in range(hour, len(Dic[i])):
-                StringJson = StringJson + "{" \
-                                          "\"StartDateTime\": \"" + str(date_list[j].isoformat()) + "\",\n" + \
-                             "\"VariableID\": " + str(var) + ",\n" + \
-                             "\"VariableName\": \"" + str(i) + "\",\n" + \
-                             "\"Description\": \"" + str(des) + "\",\n" + \
-                             "\"Value\":" + str(Dic[i][j]) + "},\n"
-
-            StringJson = StringJson[:-2] + "]"
-            print(self.path)
-            if Recalculo==0:
-                pathFull = os.path.abspath(self.path + Name + "pizarra" + "_Variable_" + str(i) + ".json")
-            if Recalculo!=0:
-                pathFull = os.path.abspath(self.path + Name +"_"+Recalculo+ "_pizarra" + "_Variable_" + str(i) + ".json")
-            print(pathFull)
-            with open(pathFull, "w") as out:
-                out.write(StringJson)
-        return 1
