@@ -134,3 +134,6 @@ if __name__ == '__main__':
     s=(x.GetEitData(Building="ICPE",DateStart="2016-10-29T13:45:00.000Z",DateEnd="2016-11-29T13:45:00.000Z"))
     Sensors =list( s["ID_Sensor"])
     print(Sensors)
+
+
+    print(Timestamp(x))
