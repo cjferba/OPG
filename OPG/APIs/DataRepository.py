@@ -1,6 +1,8 @@
 from pymongo import MongoClient
 import pandas as pd
 import datetime
+import pytz
+import dateutil.parser
 
 
 class DRepositoryAPI:
@@ -40,12 +42,31 @@ class DRepositoryAPI:
             del df['_id']
         return df
 
-    def GetEitData(self, Building, Selections, DateStart, DateEnd=datetime.datetime.today()):
+    def GetEitData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat())+"Z",
+                   DateEnd=str((datetime.datetime.today()).isoformat())+"Z"):
         self.connect()
         self.__conn.select_db(database="EiT_V2")
         self.__conn.select_collection(collect="Metadata")
         MetaData = self.GetEitMetadata(Building=Building)
-        return 0
+        if Selections == []:
+            Sensors = list(MetaData["Sensor_ID"])
+        else:
+            Sensors = Selections
+
+        """Date to Timestamp"""
+        Start = Timestamp(dateutil.parser.parse(DateStart))
+        print(Start)
+        End = Timestamp(dateutil.parser.parse(DateEnd))
+        print(End)
+        """Query"""
+        self.__conn.select_collection(collect=Building)
+        print(Sensors)
+        cursor = self.__conn.collection.find({"ID_Sensor": {"$in": Sensors},"timestamp": { "$gte": Start, "$lte": End }})
+        df = pd.DataFrame(list(cursor))
+        """ Read from Mongo and Store into DataFrame """
+        # Delete the _id
+        del df['_id']
+        return df
 
 
 class MongoDB:
@@ -97,7 +118,22 @@ class MongoDB:
         self.collection = self.db[collect]
 
 
+def Timestamp(date):
+    # x=date.strftime('%s')
+    # date = datetime.datetime(int(year), int(moth), int(day), int(hour), int(minu), int(seclist[0]), int(0), pytz.UTC)
+    return (date - datetime.datetime(1970, 1, 1, 0, 0, 0, 0, pytz.UTC)).total_seconds()
+
+
+def Date(t):
+    return datetime.datetime.fromtimestamp(t)
+
+
 if __name__ == '__main__':
     print("Star")
     x = DRepositoryAPI("cjferba", "alfaomega")
-    print(x.GetEitMetadata("ICPE"))
+    s=(x.GetEitData(Building="ICPE",DateStart="2016-10-29T13:45:00.000Z",DateEnd="2016-11-29T13:45:00.000Z"))
+    Sensors =list( s["ID_Sensor"])
+    print(Sensors)
+
+
+    print(Timestamp(x))
