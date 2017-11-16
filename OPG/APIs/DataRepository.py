@@ -42,16 +42,19 @@ class DRepositoryAPI:
             del df['_id']
         return df
 
-    def GetEitData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat()) + "Z",
-                   DateEnd=str((datetime.datetime.today()).isoformat()) + "Z"):
-        self.connect()
-        self.__conn.select_db(database="EiT_V2")
-        self.__conn.select_collection(collect="Metadata")
-        MetaData = self.GetEitMetadata(Building=Building)
-        if Selections == []:
-            Sensors = list(MetaData["Sensor_ID"])
+    def GetEitRawData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat()) + "Z",
+                   DateEnd=str((datetime.datetime.today()).isoformat()) + "Z", Resample=False):
+        if Resample==False:
+            self.connect()
+            self.__conn.select_db(database="EiT_V2")
+            self.__conn.select_collection(collect="Metadata")
+            MetaData = self.GetEitMetadata(Building=Building)
+            if Selections == []:
+                Sensors = list(MetaData["Sensor_ID"])
+            else:
+                Sensors = Selections
         else:
-            Sensors = Selections
+            Sensors=Selections
 
         """Date to Timestamp"""
         Start = Timestamp(dateutil.parser.parse(DateStart))
@@ -60,13 +63,51 @@ class DRepositoryAPI:
         print(End)
         """Query"""
         self.__conn.select_collection(collect=Building)
-        print(Sensors)
         cursor = self.__conn.collection.find({"ID_Sensor": {"$in": Sensors}, "timestamp": {"$gte": Start, "$lte": End}})
         df = pd.DataFrame(list(cursor))
         """ Read from Mongo and Store into DataFrame """
         # Delete the _id
-        del df['_id']
+   #     del df['_id']
         return df
+    def GetEitData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat()) + "Z",
+                   DateEnd=str((datetime.datetime.today()).isoformat()) + "Z",Resample=0):
+
+        data= pd.DataFrame(columns=["time"])
+        data["time"] = pd.date_range(start=DateStart, end=DateEnd, freq='15T')
+        data["Building"] =  pd.Series(len(data)* [Building], index=data.index)
+        self.connect()
+        self.__conn.select_db(database="EiT_V2")
+        self.__conn.select_collection(collect="Metadata")
+        MetaData = self.GetEitMetadata(Building=Building)
+        if Selections == []:
+            Sensors = list(MetaData["Sensor_ID"])
+        else:
+            Sensors = Selections
+        print(data)
+        for i in Sensors:
+            x=self.GetEitRawData(Building=Building,Selections=[i],DateStart=DateStart,DateEnd=DateEnd, Resample=True)
+            x=x.loc[:,["value","date"]]
+            from dateutil import parser
+            dt = parser.parse("Aug 28 1999 12:00AM")
+            df2 = pd.DataFrame([[x.loc[len(x)-1,"value"],parser.parse(str(data.loc[len(data)-1,'time']).split("+")[0])],
+                                [x.loc[0,"value"], parser.parse(( str(data.loc[0,'time'])).split("+")[0])]],
+                               columns=['value','date'])
+            x=x.append(df2)
+            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            print(x)
+            if len(x)!=0:
+                x=x.resample('15T', on='date',how = 'mean')
+                #.resample('60Min', how=conversion, base=30)
+                print ("SEGUNDA")
+                x=x.interpolate(method='cubic', downcast='infer')
+                data[i] = data.assign(e=x.loc[:,["value"]].values)
+
+        # if Resample!=0:
+        #     df.resample('3T').sum()
+        #     df = pd.DataFrame(data=9 * [range(4)], columns=['a', 'b', 'c', 'd'])
+        #     df['time'] = pd.date_range('1/1/2000', periods=9, freq='T')
+        #     df.resample('3T', on='time').sum()
+        return data
 
 
 class MongoDB:
@@ -131,6 +172,10 @@ def Date(t):
 if __name__ == '__main__':
     print("Star")
     x = DRepositoryAPI("cjferba", "alfaomega")
-    s = (x.GetEitData(Building="ICPE", DateStart="2016-10-29T13:45:00.000Z", DateEnd="2016-11-29T13:45:00.000Z"))
-    Sensors = list(s["ID_Sensor"])
-    print(Sensors)
+
+    DateStart = "2017-09-16T00:00:00.000000Z"
+    DateEnd = "2017-09-17T00:00:00.000000Z"
+    s = (x.GetEitData(Building="ICPE", DateStart=DateStart, DateEnd=DateEnd))
+    #Sensors = list(s["ID_Sensor"])
+    # print(Sensors)
+
