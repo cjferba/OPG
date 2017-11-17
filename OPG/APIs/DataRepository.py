@@ -43,8 +43,8 @@ class DRepositoryAPI:
         return df
 
     def GetEitRawData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat()) + "Z",
-                   DateEnd=str((datetime.datetime.today()).isoformat()) + "Z", Resample=False):
-        if Resample==False:
+                      DateEnd=str((datetime.datetime.today()).isoformat()) + "Z", Resample=False):
+        if Resample == False:
             self.connect()
             self.__conn.select_db(database="EiT_V2")
             self.__conn.select_collection(collect="Metadata")
@@ -54,7 +54,7 @@ class DRepositoryAPI:
             else:
                 Sensors = Selections
         else:
-            Sensors=Selections
+            Sensors = Selections
 
         """Date to Timestamp"""
         Start = Timestamp(dateutil.parser.parse(DateStart))
@@ -67,14 +67,15 @@ class DRepositoryAPI:
         df = pd.DataFrame(list(cursor))
         """ Read from Mongo and Store into DataFrame """
         # Delete the _id
-   #     del df['_id']
+        #     del df['_id']
         return df
-    def GetEitData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat()) + "Z",
-                   DateEnd=str((datetime.datetime.today()).isoformat()) + "Z",Resample=0):
 
-        data= pd.DataFrame(columns=["time"])
+    def GetEitData(self, Building, Selections=[], DateStart=str((datetime.datetime.today()).isoformat()) + "Z",
+                   DateEnd=str((datetime.datetime.today()).isoformat()) + "Z", Resample=0):
+
+        data = pd.DataFrame(columns=["time"])
         data["time"] = pd.date_range(start=DateStart, end=DateEnd, freq='15T')
-        data["Building"] =  pd.Series(len(data)* [Building], index=data.index)
+        data["Building"] = pd.Series(len(data) * [Building], index=data.index)
         self.connect()
         self.__conn.select_db(database="EiT_V2")
         self.__conn.select_collection(collect="Metadata")
@@ -83,30 +84,34 @@ class DRepositoryAPI:
             Sensors = list(MetaData["Sensor_ID"])
         else:
             Sensors = Selections
-        print(data)
         for i in Sensors:
-            x=self.GetEitRawData(Building=Building,Selections=[i],DateStart=DateStart,DateEnd=DateEnd, Resample=True)
-            x=x.loc[:,["value","date"]]
-            from dateutil import parser
-            dt = parser.parse("Aug 28 1999 12:00AM")
-            df2 = pd.DataFrame([[x.loc[len(x)-1,"value"],parser.parse(str(data.loc[len(data)-1,'time']).split("+")[0])],
-                                [x.loc[0,"value"], parser.parse(( str(data.loc[0,'time'])).split("+")[0])]],
-                               columns=['value','date'])
-            x=x.append(df2)
-            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-            print(x)
-            if len(x)!=0:
-                x=x.resample('15T', on='date',how = 'mean')
-                #.resample('60Min', how=conversion, base=30)
-                print ("SEGUNDA")
-                x=x.interpolate(method='cubic', downcast='infer')
-                data[i] = data.assign(e=x.loc[:,["value"]].values)
+            print(i)
+            x = self.GetEitRawData(Building=Building, Selections=[i], DateStart=DateStart, DateEnd=DateEnd,
+                                   Resample=True)
+            if len(x) != 0:
+                print(x)
+                x = x.loc[:, ["value", "date"]]
+                from dateutil import parser
+                dt = parser.parse("Aug 28 1999 12:00AM")
+                df2 = pd.DataFrame(
+                    [[x.loc[len(x) - 1, "value"], parser.parse(str(data.loc[len(data) - 1, 'time']).split("+")[0])],
+                     [x.loc[0, "value"], parser.parse((str(data.loc[0, 'time'])).split("+")[0])]],
+                    columns=['value', 'date'])
+                x = x.append(df2)
+                print(x.tail())
+                x = x.resample('15T', on='date').mean()
+                print(x)
+                # .resample('60Min', how=conversion, base=30)
+                print("SEGUNDA")
+                x = x.interpolate(method='cubic', downcast='infer')
+                data[i] = x.loc[:, ["value"]]
+                print(data)
 
-        # if Resample!=0:
-        #     df.resample('3T').sum()
-        #     df = pd.DataFrame(data=9 * [range(4)], columns=['a', 'b', 'c', 'd'])
-        #     df['time'] = pd.date_range('1/1/2000', periods=9, freq='T')
-        #     df.resample('3T', on='time').sum()
+    # if Resample!=0:
+    #     df.resample('3T').sum()
+    #     df = pd.DataFrame(data=9 * [range(4)], columns=['a', 'b', 'c', 'd'])
+    #     df['time'] = pd.date_range('1/1/2000', periods=9, freq='T')
+    #     df.resample('3T', on='time').sum()
         return data
 
 
@@ -176,6 +181,5 @@ if __name__ == '__main__':
     DateStart = "2017-09-16T00:00:00.000000Z"
     DateEnd = "2017-09-17T00:00:00.000000Z"
     s = (x.GetEitData(Building="ICPE", DateStart=DateStart, DateEnd=DateEnd))
-    #Sensors = list(s["ID_Sensor"])
+    # Sensors = list(s["ID_Sensor"])
     # print(Sensors)
-
