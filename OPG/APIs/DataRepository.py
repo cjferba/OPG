@@ -20,7 +20,7 @@ class DRepositoryAPI:
         return True
 
     def disconnect(self):
-        self.__conn.close()
+        self.__conn.disconnect()
         return True
 
     def GetDataMining(self, Building=[], Dates=[]):
@@ -85,7 +85,6 @@ class DRepositoryAPI:
         else:
             Sensors = Selections
         for i in Sensors:
-            print(i)
             x = self.GetEitRawData(Building=Building, Selections=[i], DateStart=DateStart, DateEnd=DateEnd,
                                    Resample=True)
             if len(x) != 0:
@@ -102,17 +101,12 @@ class DRepositoryAPI:
                 x=x.resample(Resample, on='date').mean()
                 if Interpolate==True:
                     x = x.interpolate(method='cubic', downcast='infer')
-                print(x)
-                print(len(x))
                 data[i] = x.loc[:, ["value"]].values
-
-    # if Resample!=0:
-    #     df.resample('3T').sum()
-    #     df = pd.DataFrame(data=9 * [range(4)], columns=['a', 'b', 'c', 'd'])
-    #     df['time'] = pd.date_range('1/1/2000', periods=9, freq='T')
-    #     df.resample('3T', on='time').sum()
+        self.disconnect()
         return data
 
+    def InsertoOP(self,plan):
+        return 0
 
 class MongoDB:
     __name = ""
@@ -135,6 +129,8 @@ class MongoDB:
 
     def connect(self):
         self.Client = MongoClient(self.uri, self.Port)
+    def disconnect(self):
+        self.Client.close()
 
     def select_db(self, database="EiT"):
         self.db = self.Client[database]
@@ -177,9 +173,8 @@ if __name__ == '__main__':
     print("Star")
     x = DRepositoryAPI("cjferba", "alfaomega")
 
-    DateStart = "2017-08-16T00:00:00.000000Z"
+    DateStart = "2017-06-16T00:00:00.000000Z"
     DateEnd = "2017-08-17T00:00:00.000000Z"
-    s = (x.GetEitData(Building="ICPE", DateStart=DateStart, DateEnd=DateEnd,Selections=[9003]))
-    # Sensors = list(s["ID_Sensor"])
+    s = (x.GetEitData(Building="FaroBMS", DateStart=DateStart, DateEnd=DateEnd))#,Selections=[9003]))
     s.to_csv("DataRepository.csv")
     print(s)
