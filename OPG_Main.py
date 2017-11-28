@@ -1,6 +1,9 @@
 import OPG
 import datetime
 import pandas as pd
+from os import walk
+from dateutil.parser import parse
+
 
 import shutil, os
 
@@ -60,14 +63,8 @@ Channels = ["SC002227", "SC002236", "SC002249", "SC002271", "SC002238", "SC00231
             "SC002477", "SC002478", "SC002479", "SC002480", "SC002481", "SC002482"]
 Ocuppacion = ["SC002477", "SC002478", "SC002479", "SC002480", "SC002481", "SC002482"]
 rooms = ["A51", "A52", "A53", "A54", "A55", "A56"]
-dir = os.path.dirname(__file__)
-print(dir)
 
-p = "Data_Scenarios/"
 
-from os import walk
-
-from dateutil.parser import parse
 
 
 def is_date(string):
@@ -76,67 +73,12 @@ def is_date(string):
         return True
     except ValueError:
         return False
-
-
 def ls(ruta='.'):
     dir, subdirs, archivos = next(walk(ruta))
     return subdirs, archivos
 
 
-Lista = (ls(ruta=p))[0]
-ListaFechas = []
 
-# for i in Lista:
-#    if is_date(i):
-#        ListaFechas.append(i)
-
-
-Lista = (ls(ruta=p))[1]  # "/"+ListaFechas[0])
-
-for i in range(0, len(Lista)):
-    Lista[i] = p + "/" + Lista[i]
-print(Lista)
-
-for name in Lista:
-    print(name)
-    SimulacionName = "Simulacion FARO Planes Ocupacion" + name.split("/")[2].replace(".csv", "_")
-    print(name.split("/")[2])
-    DIC = {}
-    Datos = pd.read_csv(name)
-    DIC["SC002227"] = list((Datos['SC002227']).astype(dtype=float))
-    DIC["SC002236"] = list((Datos['SC002236']).astype(dtype=float))
-    DIC["SC002249"] = list((Datos['SC002249']).astype(dtype=float))
-    DIC["SC002271"] = list((Datos['SC002271']).astype(dtype=float))
-    DIC["SC002238"] = list((Datos['SC002238']).astype(dtype=float))
-    DIC["SC002310"] = list((Datos['SC002310']).astype(dtype=float))
-    DIC["SC002321"] = list((Datos['SC002321']).astype(dtype=float))
-    DIC["SC002282"] = list((Datos['SC002282']).astype(dtype=float))
-    DIC["SC002332"] = list((Datos['SC002332']).astype(dtype=float))
-    DIC["SC002354"] = list((Datos['SC002354']).astype(dtype=float))
-    DIC["SC002365"] = list((Datos['SC002365']).astype(dtype=float))
-    DIC["SC002376"] = list((Datos['SC002376']).astype(dtype=float))
-    DIC["SC002299"] = list((Datos['SC002299']).astype(dtype=float))
-    DIC["SC002343"] = list((Datos['SC002343']).astype(dtype=float))
-    DIC["SC002260"] = list((Datos['SC002260']).astype(dtype=float))
-
-    DicOcupacion = {}
-    DicOcupacion["SC002477"] = list((Datos['SC002477']).astype(dtype=float))
-    DicOcupacion["SC002478"] = list((Datos['SC002478']).astype(dtype=float))
-    DicOcupacion["SC002479"] = list((Datos['SC002479']).astype(dtype=float))
-    DicOcupacion["SC002480"] = list((Datos['SC002480']).astype(dtype=float))
-    DicOcupacion["SC002481"] = list((Datos['SC002481']).astype(dtype=float))
-    DicOcupacion["SC002482"] = list((Datos['SC002482']).astype(dtype=float))
-
-    Dic4 = DIC.copy()
-    print("######################################")
-    print(DicOcupacion["SC002482"])
-
-    inde = name.find("(")
-    inde2 = name.find(")")
-    Fecha = name[(inde + 1):inde2]
-    Fecha = Fecha.split("-")
-    print("######################################")
-    print(Fecha)
     a = 0
     # Fecha=["08","07","2017"]
     a = OPG.OPG(Current=1, OcupacionChannels=Ocuppacion,
