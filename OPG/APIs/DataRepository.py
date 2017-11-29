@@ -158,9 +158,22 @@ class DRepositoryAPI:
         self.disconnect()
         return data
 
-    def InsertoOP(self,plan):
-        return 0
+    def InsertoOP(self,plan,Building):
+        self.connect()
+        self.__conn.select_db(database="OPG")
+        self.__conn.select_collection(collect="OPG" + str(Building))
+        result = self.__conn.collection.insert_one(plan)
 
+        return result.inserted_id
+
+    def GetOP(self,Date,Building):
+        self.connect()
+        self.__conn.select_db(database="OPG")
+        self.__conn.select_collection(collect="OPG"+str(Building))
+        cursor = self.__conn.collection.find(
+            {"ID_Sensor": Sensors, "timestamp": {"$gte": Start, "$lte": End}})
+
+        return 0
 class MongoDB:
     __name = ""
     __host = "150.214.203.106"
