@@ -241,3 +241,5 @@ if __name__ == '__main__':
     s = (x.GetEitData(Building="FaroBMS", DateStart=DateStart, DateEnd=DateEnd))#,Selections=[9003]))
     s.to_csv("DataRepository.csv")
     print(s)
+
+

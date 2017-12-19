@@ -6,7 +6,6 @@ import os
 import ssl
 import sys
 import time
-import pymongo
 import numpy as np
 import zipfile
 from os import listdir
@@ -14,7 +13,6 @@ from shutil import copyfile
 import pandas as pd
 from bokeh.layouts import gridplot
 from bokeh.plotting import figure
-from bokeh.io import save
 import shutil
 
 import OPG.OPG_Structures.Scenario as Scenario
@@ -1163,5 +1161,3 @@ class OPG:
         date = str(self.StarDate)
         # exec(open("Scenario_plots.py").read())
         return names[0]
-
-
